@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Planner</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 3fr;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .items-list {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .months-grid {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ddd;
+            min-width: 100px;
+        }
+
+        .current-month {
+            background-color: #e3f2fd;
+        }
+
+        input {
+            width: 80px;
+            padding: 5px;
+            text-align: center;
+        }
+
+        .charts {
+            grid-column: 1 / -1;
+            margin-top: 20px;
+        }
+
+        .balance {
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        .negative {
+            color: #c62828;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="items-list">
+            <h2>Categories</h2>
+            <div id="categories">
+                <div class="category-item">
+                    <h3>Salary</h3>
+                    <button onclick="addCategory('income')">+ Add Income</button>
+                </div>
+                <div class="category-item">
+                    <h3>Expenses</h3>
+                    <button onclick="addCategory('expense')">+ Add Expense</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="months-grid">
+            <table id="financialTable">
+                <thead>
+                    <tr id="monthsHeader"></tr>
+                </thead>
+                <tbody id="financialBody"></tbody>
+            </table>
+        </div>
+
+        <div class="charts">
+            <canvas id="monthlyChart"></canvas>
+            <canvas id="projectionChart"></canvas>
+        </div>
+    </div>
+
+<script>
+let financialData = {
+    categories: [
+        { type: 'income', name: 'Salary', values: [] },
+        { type: 'expense', name: 'Rent', values: [] },
+        { type: 'expense', name: 'Food', values: [] }
+    ],
+    months: [],
+    balance: []
+};
+
+let monthlyChart, projectionChart;
+
+function initializeMonths() {
+    const today = new Date();
+    financialData.months = Array.from({ length: 12 }, (_, i) => {
+        const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+        return {
+            name: date.toLocaleString('default', { month: 'long' }),
+            year: date.getFullYear(),
+            current: i === 0
+        };
+    });
+}
+
+function addCategory(type) {
+    const name = prompt(`Enter ${type} name:`);
+    if (name) {
+        financialData.categories.push({
+            type,
+            name,
+            values: Array(12).fill(0)
+        });
+        updateTable();
+    }
+}
+
+function updateTable() {
+    const headerRow = document.getElementById('monthsHeader');
+    const body = document.getElementById('financialBody');
+    
+    // Update headers
+    headerRow.innerHTML = financialData.months
+        .map((month, index) => `<th class="${month.current ? 'current-month' : ''}">${month.name} ${month.year}</th>`)
+        .join('');
+
+    // Update body
+    body.innerHTML = financialData.categories.map((category, catIndex) => {
+        const cells = financialData.months.map((month, monthIndex) => `
+            <td>
+                <input type="number" 
+                       value="${category.values[monthIndex] || 0}"
+                       onchange="updateValue(${catIndex}, ${monthIndex}, this.value)">
+            </td>
+        `).join('');
+
+        return `
+            <tr>
+                <td style="text-align: left">${category.name}</td>
+                ${cells}
+            </tr>
+        `;
+    }).join('');
+
+    // Add balance row
+    calculateBalance();
+    body.innerHTML += `
+        <tr class="balance">
+            <td style="text-align: left">Balance</td>
+            ${financialData.balance.map(b => `
+                <td class="${b < 0 ? 'negative' : ''}">${b}</td>
+            `).join('')}
+        </tr>
+    `;
+
+    updateCharts();
+}
+
+function updateValue(catIndex, monthIndex, value) {
+    financialData.categories[catIndex].values[monthIndex] = parseFloat(value) || 0;
+    calculateBalance();
+    updateTable();
+}
+
+function calculateBalance() {
+    let runningBalance = 0;
+    financialData.balance = financialData.months.map((_, monthIndex) => {
+        const income = financialData.categories
+            .filter(c => c.type === 'income')
+            .reduce((sum, c) => sum + (c.values[monthIndex] || 0), 0);
+
+        const expenses = financialData.categories
+            .filter(c => c.type === 'expense')
+            .reduce((sum, c) => sum + (c.values[monthIndex] || 0), 0);
+
+        runningBalance += (income - expenses);
+        return runningBalance.toFixed(2);
+    });
+}
+
+function updateCharts() {
+    // Monthly breakdown chart
+    const currentMonthIndex = financialData.months.findIndex(m => m.current);
+    if (monthlyChart) monthlyChart.destroy();
+    
+    monthlyChart = new Chart(document.getElementById('monthlyChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Income', 'Expenses', 'Net'],
+            datasets: [{
+                label: `Current Month (${financialData.months[currentMonthIndex].name})`,
+                data: [
+                    financialData.categories.filter(c => c.type === 'income')
+                        .reduce((sum, c) => sum + (c.values[currentMonthIndex] || 0), 0),
+                    financialData.categories.filter(c => c.type === 'expense')
+                        .reduce((sum, c) => sum + (c.values[currentMonthIndex] || 0), 0),
+                    financialData.balance[currentMonthIndex]
+                ],
+                backgroundColor: ['#4CAF50', '#f44336', '#2196F3']
+            }]
+        }
+    });
+
+    // Projection chart
+    if (projectionChart) projectionChart.destroy();
+    projectionChart = new Chart(document.getElementById('projectionChart'), {
+        type: 'line',
+        data: {
+            labels: financialData.months.map(m => `${m.name} ${m.year}`),
+            datasets: [{
+                label: 'Balance Projection',
+                data: financialData.balance,
+                borderColor: '#2196F3',
+                tension: 0.1
+            }]
+        }
+    });
+}
+
+// Initialization
+initializeMonths();
+financialData.categories.forEach(cat => {
+    cat.values = Array(12).fill(0);
+});
+updateTable();
+</script>
+</body>
+</html>
