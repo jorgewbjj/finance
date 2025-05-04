@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Advanced Financial Tracker with Chart</title>
+    <title>Advanced Financial Tracker</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -83,8 +84,8 @@
     <div class="container">
         <div class="category-sidebar">
             <div class="category-management">
-                <h3>Categories</h3>
-                <button onclick="showAddCategoryModal()">+ Add Category</button>
+                <h3>Categorias</h3>
+                <button onclick="showAddCategoryModal()">+ Adicionar Categoria</button>
                 <div id="categoryList"></div>
             </div>
         </div>
@@ -102,17 +103,18 @@
     </div>
 
     <div id="categoryModal" style="display: none; position: fixed; top: 20%; left: 50%; transform: translateX(-50%); background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-        <h3>Manage Category</h3>
-        <input type="text" id="categoryName" placeholder="Category name">
+        <h3>Gerenciar Categoria</h3>
+        <input type="text" id="categoryName" placeholder="Nome da categoria">
         <select id="categoryType">
-            <option value="income">Income</option>
-            <option value="expense">Expense</option>
+            <option value="income">Receita</option>
+            <option value="expense">Despesa</option>
         </select>
-        <button onclick="saveCategory()">Save</button>
-        <button onclick="closeModal()">Cancel</button>
+        <button onclick="saveCategory()">Salvar</button>
+        <button onclick="closeModal()">Cancelar</button>
     </div>
 
 <script>
+Chart.register(ChartDataLabels);
 let balanceChart = null;
 
 let state = {
@@ -148,15 +150,15 @@ function loadCategories() {
         : [
             { 
                 id: 1, 
-                name: 'Salary', 
+                name: 'Salário', 
                 type: 'income', 
-                values: Array(12).fill(3000) // Sample income data
+                values: Array(12).fill(5000) 
             },
             { 
                 id: 2, 
-                name: 'Rent', 
+                name: 'Aluguel', 
                 type: 'expense', 
-                values: Array(12).fill(1200) // Sample expense data
+                values: Array(12).fill(2000) 
             }
         ];
     
@@ -213,9 +215,9 @@ function renderCategoryList() {
     const list = document.getElementById('categoryList');
     list.innerHTML = state.categories.map(c => `
         <div class="category-item">
-            ${c.name} (${c.type})
-            <button onclick="showAddCategoryModal(${c.id})">Edit</button>
-            <button onclick="deleteCategory(${c.id})">Delete</button>
+            ${c.name} (${c.type === 'income' ? 'Receita' : 'Despesa'})
+            <button onclick="showAddCategoryModal(${c.id})">Editar</button>
+            <button onclick="deleteCategory(${c.id})">Excluir</button>
         </div>
     `).join('');
 }
@@ -227,7 +229,7 @@ function renderGrid() {
 
     header.innerHTML = `
         <tr>
-            <th>Category</th>
+            <th>Categoria</th>
             ${state.months.map(m => `<th${m.isCurrent ? ' class="current-month"' : ''}>${m.name}</th>`).join('')}
         </tr>
     `;
@@ -238,8 +240,9 @@ function renderGrid() {
             ${category.values.map((value, index) => `
                 <td>
                     <input type="number" 
-                           value="${value}"
-                           onchange="updateValue(${category.id}, ${index}, this.value)">
+                           value="${value !== 0 ? value : ''}"
+                           onchange="updateValue(${category.id}, ${index}, this.value)"
+                           placeholder="0">
                 </td>
             `).join('')}
         </tr>
@@ -247,7 +250,7 @@ function renderGrid() {
 
     footer.innerHTML = `
         <tr class="running-balance">
-            <td>Projected Balance</td>
+            <td>Saldo Projetado</td>
             ${calculateRunningBalances().map(balance => `
                 <td class="${balance >= 0 ? 'positive' : 'negative'}">
                     ${formatCurrency(balance)}
@@ -294,7 +297,7 @@ function renderBalanceChart() {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Projected Balance',
+                label: 'Saldo Projetado',
                 data: balances,
                 borderColor: '#2c3e50',
                 backgroundColor: 'rgba(44, 62, 80, 0.1)',
@@ -313,14 +316,26 @@ function renderBalanceChart() {
                 },
                 title: {
                     display: true,
-                    text: '12-Month Balance Projection',
+                    text: 'Projeção de Saldo para 12 Meses',
                     font: { size: 16 }
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return 'Balance: ' + formatCurrency(context.raw);
+                            return 'Saldo: ' + formatCurrency(context.raw);
                         }
+                    }
+                },
+                datalabels: {
+                    anchor: 'end',
+                    align: 'top',
+                    color: '#2c3e50',
+                    font: {
+                        weight: 'bold',
+                        size: 12
+                    },
+                    formatter: function(value) {
+                        return formatCurrency(value);
                     }
                 }
             },
@@ -329,7 +344,7 @@ function renderBalanceChart() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '$' + value.toLocaleString();
+                            return formatCurrency(value);
                         }
                     }
                 }
@@ -339,9 +354,9 @@ function renderBalanceChart() {
 }
 
 function formatCurrency(value) {
-    return new Intl.NumberFormat('en-US', {
+    return new Intl.NumberFormat('pt-BR', {
         style: 'currency',
-        currency: 'USD'
+        currency: 'BRL'
     }).format(value);
 }
 
@@ -349,7 +364,6 @@ function saveState() {
     localStorage.setItem('categories', JSON.stringify(state.categories));
 }
 
-// Initialize the app
 init();
 </script>
 </body>
