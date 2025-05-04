@@ -3,252 +3,639 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Planner</title>
+    <title>Advanced Financial Planner</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        /* Comprehensive CSS Styles */
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f1c40f;
+            --info-color: #2980b9;
+            --light-bg: #ecf0f1;
+            --dark-text: #2c3e50;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f5f5f5;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--light-bg);
+            color: var(--dark-text);
         }
 
         .container {
             display: grid;
-            grid-template-columns: 1fr 3fr;
-            gap: 20px;
-            max-width: 1400px;
+            grid-template-columns: 300px 1fr;
+            gap: 25px;
+            max-width: 1600px;
             margin: 0 auto;
         }
 
-        .items-list {
+        .auth-section {
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 30px;
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
         }
 
-        .months-grid {
+        .panel {
             background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            overflow-x: auto;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
 
-        table {
+        .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 20px;
+            margin: 20px 0;
+            background: white;
         }
 
-        th, td {
-            padding: 10px;
-            text-align: center;
+        .data-table th,
+        .data-table td {
+            padding: 12px 15px;
             border: 1px solid #ddd;
-            min-width: 100px;
+            min-width: 110px;
+            text-align: center;
         }
 
         .current-month {
-            background-color: #e3f2fd;
+            background-color: #e8f4fd !important;
         }
 
-        input {
-            width: 80px;
-            padding: 5px;
-            text-align: center;
+        .category-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
         }
 
-        .charts {
-            grid-column: 1 / -1;
-            margin-top: 20px;
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: var(--light-bg);
+            border-radius: 6px;
         }
 
-        .balance {
-            font-weight: bold;
-            color: #2e7d32;
+        input[type="number"] {
+            width: 90px;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
         }
 
-        .negative {
-            color: #c62828;
+        button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .primary-btn {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .secondary-btn {
+            background-color: var(--light-bg);
+            color: var(--dark-text);
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 6px;
+            display: none;
+        }
+
+        .alert-danger {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        .chart-container {
+            margin-top: 30px;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+        }
+
+        .color-picker {
+            width: 28px;
+            height: 28px;
+            border: 2px solid #ddd;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .import-export {
+            margin-top: 25px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+
+        .history-controls {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .report-section {
+            background: white;
+            padding: 25px;
+            margin-top: 25px;
+            border-radius: 12px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="items-list">
-            <h2>Categories</h2>
-            <div id="categories">
-                <div class="category-item">
-                    <h3>Salary</h3>
-                    <button onclick="addCategory('income')">+ Add Income</button>
-                </div>
-                <div class="category-item">
-                    <h3>Expenses</h3>
-                    <button onclick="addCategory('expense')">+ Add Expense</button>
-                </div>
-            </div>
-        </div>
-
-        <div class="months-grid">
-            <table id="financialTable">
-                <thead>
-                    <tr id="monthsHeader"></tr>
-                </thead>
-                <tbody id="financialBody"></tbody>
-            </table>
-        </div>
-
-        <div class="charts">
-            <canvas id="monthlyChart"></canvas>
-            <canvas id="projectionChart"></canvas>
+    <!-- Authentication Section -->
+    <div class="auth-section" id="authSection">
+        <h2>Financial Planner Login</h2>
+        <div id="loginForm">
+            <input type="password" id="password" placeholder="Enter password" style="width: 100%; margin: 10px 0; padding: 12px;">
+            <button class="primary-btn" onclick="handleLogin()">Unlock</button>
         </div>
     </div>
 
+    <!-- Main Application -->
+    <div class="container" id="appContainer" style="display: none;">
+        <!-- Left Panel -->
+        <div class="panel">
+            <h2>Categories</h2>
+            <div class="category-list" id="categoryList">
+                <!-- Categories will be populated here -->
+            </div>
+            <button class="primary-btn" onclick="showAddCategoryModal()">+ Add Category</button>
+            
+            <!-- Budget Settings -->
+            <div class="budget-settings" style="margin-top: 25px;">
+                <h3>Budget Limits</h3>
+                <div id="budgetLimits"></div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <div class="panel">
+            <!-- Controls -->
+            <div class="history-controls">
+                <button class="secondary-btn" onclick="undo()" id="undoBtn">↩ Undo</button>
+                <button class="secondary-btn" onclick="redo()" id="redoBtn">↪ Redo</button>
+            </div>
+
+            <!-- Data Table -->
+            <div style="overflow-x: auto;">
+                <table class="data-table" id="financialTable">
+                    <thead id="tableHeader"></thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Alerts -->
+            <div id="alertsContainer"></div>
+
+            <!-- Import/Export -->
+            <div class="import-export">
+                <input type="file" id="csvInput" hidden accept=".csv">
+                <button class="primary-btn" onclick="document.getElementById('csvInput').click()">Import CSV</button>
+                <button class="primary-btn" onclick="exportToCSV()">Export CSV</button>
+                <button class="primary-btn" onclick="showReport()">Generate Report</button>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="chart-container" style="grid-column: 1 / -1;">
+            <canvas id="monthlyChart"></canvas>
+            <canvas id="projectionChart"></canvas>
+        </div>
+
+        <!-- Report Section -->
+        <div class="report-section" id="reportSection" style="display: none;">
+            <h3>Financial Report</h3>
+            <div id="reportContent"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="categoryModal" class="modal" style="display: none;">
+        <!-- Modal content -->
+    </div>
+
+    <!-- Continue to Part 2 for JavaScript implementation -->
+</body>
+</html>
+<!-- Add this before </body> -->
 <script>
-let financialData = {
-    categories: [
-        { type: 'income', name: 'Salary', values: [] },
-        { type: 'expense', name: 'Rent', values: [] },
-        { type: 'expense', name: 'Food', values: [] }
-    ],
+// Core State Management
+const FINANCE_STATE = 'financeState';
+const HISTORY_LIMIT = 50;
+let state = {
+    categories: [],
     months: [],
-    balance: []
+    transactions: [],
+    balance: [],
+    history: [],
+    currentHistory: -1,
+    budgets: {},
+    colors: {},
+    settings: {
+        currency: 'USD',
+        dateFormat: 'MM/YYYY'
+    }
 };
 
-let monthlyChart, projectionChart;
-
-function initializeMonths() {
-    const today = new Date();
-    financialData.months = Array.from({ length: 12 }, (_, i) => {
-        const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
-        return {
-            name: date.toLocaleString('default', { month: 'long' }),
-            year: date.getFullYear(),
-            current: i === 0
-        };
-    });
-}
-
-function addCategory(type) {
-    const name = prompt(`Enter ${type} name:`);
-    if (name) {
-        financialData.categories.push({
-            type,
-            name,
-            values: Array(12).fill(0)
-        });
-        updateTable();
+// Authentication System
+function handleLogin() {
+    const password = localStorage.getItem('financePassword');
+    const input = document.getElementById('password').value;
+    
+    if (!password) {
+        if (input.length >= 8) {
+            localStorage.setItem('financePassword', input);
+            initializeApp();
+        } else {
+            alert('Password must be at least 8 characters');
+        }
+    } else if (input === password) {
+        initializeApp();
+    } else {
+        alert('Incorrect password');
     }
 }
 
-function updateTable() {
-    const headerRow = document.getElementById('monthsHeader');
-    const body = document.getElementById('financialBody');
+// Core Functions
+function initializeApp() {
+    loadState();
+    document.getElementById('authSection').style.display = 'none';
+    document.getElementById('appContainer').style.display = 'grid';
+    initializeMonths();
+    setupEventListeners();
+    updateUI();
+}
+
+function initializeMonths() {
+    const today = new Date();
+    if (state.months.length === 0) {
+        state.months = Array.from({ length: 12 }, (_, i) => {
+            const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+            return {
+                id: date.toISOString(),
+                name: date.toLocaleString('default', { month: 'long' }),
+                year: date.getFullYear(),
+                current: i === 0,
+                budget: 0
+            };
+        });
+    }
+}
+
+// State Management
+function saveState() {
+    state.history = state.history.slice(0, state.currentHistory + 1);
+    state.history.push(JSON.stringify(state));
+    state.currentHistory = Math.min(state.currentHistory + 1, HISTORY_LIMIT - 1);
+    localStorage.setItem(FINANCE_STATE, JSON.stringify(state));
+}
+
+function loadState() {
+    const saved = localStorage.getItem(FINANCE_STATE);
+    if (saved) {
+        state = JSON.parse(saved);
+        state.history = state.history || [];
+        state.currentHistory = state.currentHistory || -1;
+    }
+}
+
+function undo() {
+    if (state.currentHistory > 0) {
+        state.currentHistory--;
+        state = JSON.parse(state.history[state.currentHistory]);
+        updateUI();
+    }
+}
+
+function redo() {
+    if (state.currentHistory < state.history.length - 1) {
+        state.currentHistory++;
+        state = JSON.parse(state.history[state.currentHistory]);
+        updateUI();
+    }
+}
+
+// CSV Handling
+function exportToCSV() {
+    const headers = ['Category,Type,Budget,' + state.months.map(m => m.name).join(',')];
+    const rows = state.categories.map(c => [
+        c.name,
+        c.type,
+        c.budget || 0,
+        ...state.months.map((_, i) => c.values[i] || 0)
+    ].join(','));
+
+    const balanceRow = ['Balance,,,' + state.balance.join(',')];
+    const csv = [...headers, ...rows, ...balanceRow].join('\n');
     
-    // Update headers
-    headerRow.innerHTML = financialData.months
-        .map((month, index) => `<th class="${month.current ? 'current-month' : ''}">${month.name} ${month.year}</th>`)
-        .join('');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'financial_data.csv';
+    a.click();
+}
 
-    // Update body
-    body.innerHTML = financialData.categories.map((category, catIndex) => {
-        const cells = financialData.months.map((month, monthIndex) => `
-            <td>
-                <input type="number" 
-                       value="${category.values[monthIndex] || 0}"
-                       onchange="updateValue(${catIndex}, ${monthIndex}, this.value)">
+function handleCSVImport(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const csv = e.target.result;
+        const rows = csv.split('\n').slice(1);
+        
+        state.categories = rows.filter(row => !row.startsWith('Balance'))
+            .map(row => {
+                const [name, type, budget, ...values] = row.split(',');
+                return {
+                    name,
+                    type,
+                    budget: parseFloat(budget),
+                    values: values.map(Number)
+                };
+            });
+        
+        state.balance = rows.find(row => row.startsWith('Balance'))
+            .split(',').slice(3).map(Number);
+        
+        saveState();
+        updateUI();
+    };
+    reader.readAsText(file);
+}
+
+// UI Updates
+function updateUI() {
+    updateTable();
+    updateCharts();
+    updateBudgets();
+    checkAlerts();
+    updateHistoryButtons();
+}
+
+function updateTable() {
+    const header = document.getElementById('tableHeader');
+    const body = document.getElementById('tableBody');
+    
+    // Update table header
+    header.innerHTML = `<tr>
+        <th>Category</th>
+        ${state.months.map(m => `
+            <th class="${m.current ? 'current-month' : ''}">
+                ${m.name} ${m.year}
+            </th>
+        `).join('')}
+    </tr>`;
+    
+    // Update table body
+    body.innerHTML = state.categories.map(category => `
+        <tr>
+            <td class="category-name">
+                <span style="background:${category.color || '#eee'}" 
+                      class="category-color"></span>
+                ${category.name}
             </td>
-        `).join('');
-
-        return `
-            <tr>
-                <td style="text-align: left">${category.name}</td>
-                ${cells}
-            </tr>
-        `;
-    }).join('');
-
-    // Add balance row
-    calculateBalance();
-    body.innerHTML += `
-        <tr class="balance">
-            <td style="text-align: left">Balance</td>
-            ${financialData.balance.map(b => `
-                <td class="${b < 0 ? 'negative' : ''}">${b}</td>
+            ${state.months.map((month, i) => `
+                <td>
+                    <input type="number" 
+                           value="${category.values[i] || 0}"
+                           data-category="${category.name}"
+                           data-month="${month.id}"
+                           onchange="updateValue('${category.name}', '${month.id}', this.value)">
+                </td>
             `).join('')}
         </tr>
-    `;
-
-    updateCharts();
+    `).join('');
 }
 
-function updateValue(catIndex, monthIndex, value) {
-    financialData.categories[catIndex].values[monthIndex] = parseFloat(value) || 0;
-    calculateBalance();
-    updateTable();
+function updateValue(categoryName, monthId, value) {
+    const category = state.categories.find(c => c.name === categoryName);
+    const monthIndex = state.months.findIndex(m => m.id === monthId);
+    
+    if (category && monthIndex !== -1) {
+        category.values[monthIndex] = parseFloat(value) || 0;
+        calculateBalances();
+        saveState();
+        updateUI();
+    }
 }
 
-function calculateBalance() {
+function calculateBalances() {
     let runningBalance = 0;
-    financialData.balance = financialData.months.map((_, monthIndex) => {
-        const income = financialData.categories
+    state.balance = state.months.map((_, i) => {
+        const income = state.categories
             .filter(c => c.type === 'income')
-            .reduce((sum, c) => sum + (c.values[monthIndex] || 0), 0);
-
-        const expenses = financialData.categories
+            .reduce((sum, c) => sum + (c.values[i] || 0), 0);
+        
+        const expenses = state.categories
             .filter(c => c.type === 'expense')
-            .reduce((sum, c) => sum + (c.values[monthIndex] || 0), 0);
-
+            .reduce((sum, c) => sum + (c.values[i] || 0), 0);
+        
         runningBalance += (income - expenses);
-        return runningBalance.toFixed(2);
+        return parseFloat(runningBalance.toFixed(2));
     });
 }
 
+// Chart Management
+let monthlyChart, projectionChart;
+
 function updateCharts() {
-    // Monthly breakdown chart
-    const currentMonthIndex = financialData.months.findIndex(m => m.current);
+    // Destroy existing charts
     if (monthlyChart) monthlyChart.destroy();
+    if (projectionChart) projectionChart.destroy();
+    
+    // Current Month Chart
+    const currentMonthIndex = state.months.findIndex(m => m.current);
+    const income = state.categories
+        .filter(c => c.type === 'income')
+        .reduce((sum, c) => sum + (c.values[currentMonthIndex] || 0), 0);
+    
+    const expenses = state.categories
+        .filter(c => c.type === 'expense')
+        .reduce((sum, c) => sum + (c.values[currentMonthIndex] || 0), 0);
     
     monthlyChart = new Chart(document.getElementById('monthlyChart'), {
-        type: 'bar',
+        type: 'doughnut',
         data: {
-            labels: ['Income', 'Expenses', 'Net'],
+            labels: ['Income', 'Expenses'],
             datasets: [{
-                label: `Current Month (${financialData.months[currentMonthIndex].name})`,
-                data: [
-                    financialData.categories.filter(c => c.type === 'income')
-                        .reduce((sum, c) => sum + (c.values[currentMonthIndex] || 0), 0),
-                    financialData.categories.filter(c => c.type === 'expense')
-                        .reduce((sum, c) => sum + (c.values[currentMonthIndex] || 0), 0),
-                    financialData.balance[currentMonthIndex]
-                ],
-                backgroundColor: ['#4CAF50', '#f44336', '#2196F3']
+                data: [income, expenses],
+                backgroundColor: ['#4CAF50', '#F44336']
             }]
         }
     });
-
-    // Projection chart
-    if (projectionChart) projectionChart.destroy();
+    
+    // Projection Chart
     projectionChart = new Chart(document.getElementById('projectionChart'), {
         type: 'line',
         data: {
-            labels: financialData.months.map(m => `${m.name} ${m.year}`),
+            labels: state.months.map(m => `${m.name} ${m.year}`),
             datasets: [{
                 label: 'Balance Projection',
-                data: financialData.balance,
+                data: state.balance,
                 borderColor: '#2196F3',
-                tension: 0.1
+                tension: 0.2
             }]
+        }
+    });
+}
+
+// Category Management
+function showAddCategoryModal() {
+    const modal = document.getElementById('categoryModal');
+    modal.style.display = 'block';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <h3>Add New Category</h3>
+            <select id="categoryType">
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+            </select>
+            <input type="text" id="categoryName" placeholder="Category name">
+            <input type="color" id="categoryColor">
+            <button onclick="addCategory()">Add</button>
+            <button onclick="this.parentElement.style.display='none'">Cancel</button>
+        </div>
+    `;
+}
+
+function addCategory() {
+    const type = document.getElementById('categoryType').value;
+    const name = document.getElementById('categoryName').value;
+    const color = document.getElementById('categoryColor').value;
+    
+    if (name && !state.categories.some(c => c.name === name)) {
+        state.categories.push({
+            name,
+            type,
+            color,
+            values: Array(state.months.length).fill(0)
+        });
+        saveState();
+        updateUI();
+        document.getElementById('categoryModal').style.display = 'none';
+    }
+}
+
+// Budget Management
+function updateBudgets() {
+    const container = document.getElementById('budgetLimits');
+    container.innerHTML = state.categories
+        .filter(c => c.type === 'expense')
+        .map(c => `
+            <div class="budget-item">
+                <span>${c.name}</span>
+                <input type="number" 
+                       value="${c.budget || 0}"
+                       onchange="updateBudget('${c.name}', this.value)">
+            </div>
+        `).join('');
+}
+
+function updateBudget(categoryName, value) {
+    const category = state.categories.find(c => c.name === categoryName);
+    if (category) {
+        category.budget = parseFloat(value) || 0;
+        saveState();
+        checkAlerts();
+    }
+}
+
+// Alert System
+function checkAlerts() {
+    const alerts = [];
+    const currentMonthIndex = state.months.findIndex(m => m.current);
+    
+    // Budget Alerts
+    state.categories.filter(c => c.type === 'expense').forEach(c => {
+        const spent = c.values[currentMonthIndex] || 0;
+        if (c.budget > 0 && spent > c.budget) {
+            alerts.push(`${c.name} exceeded budget by ${(spent - c.budget).toFixed(2)}`);
+        }
+    });
+    
+    // Balance Alerts
+    if (state.balance.some(b => b < 0)) {
+        alerts.push('Negative balance detected in some months');
+    }
+    
+    displayAlerts(alerts);
+}
+
+function displayAlerts(alerts) {
+    const container = document.getElementById('alertsContainer');
+    container.innerHTML = alerts.map(alert => `
+        <div class="alert alert-danger">⚠️ ${alert}</div>
+    `).join('');
+}
+
+// Report Generation
+function showReport() {
+    const report = document.getElementById('reportContent');
+    const currentMonth = state.months.find(m => m.current);
+    
+    // Calculate averages
+    const incomeData = state.categories.filter(c => c.type === 'income');
+    const expenseData = state.categories.filter(c => c.type === 'expense');
+    
+    const avgIncome = incomeData.length > 0 
+        ? incomeData[0].values.reduce((a, b) => a + b, 0) / incomeData.length 
+        : 0;
+    
+    const avgExpense = expenseData.length > 0 
+        ? expenseData.reduce((total, c) => 
+            total + c.values.reduce((a, b) => a + b, 0), 0) / expenseData.length 
+        : 0;
+    
+    report.innerHTML = `
+        <h4>${currentMonth.name} ${currentMonth.year} Report</h4>
+        <p>Projected Year-End Balance: ${state.balance[state.balance.length - 1].toFixed(2)}</p>
+        <p>Average Monthly Income: ${avgIncome.toFixed(2)}</p>
+        <p>Average Monthly Expenses: ${avgExpense.toFixed(2)}</p>
+        <p>Estimated Monthly Savings: ${(avgIncome - avgExpense).toFixed(2)}</p>
+    `;
+    
+    document.getElementById('reportSection').style.display = 'block';
+}
+
+// Event Listeners
+function setupEventListeners() {
+    document.getElementById('csvInput').addEventListener('change', (e) => {
+        handleCSVImport(e.target.files[0]);
+    });
+    
+    window.addEventListener('click', (e) => {
+        if (e.target.className === 'modal') {
+            e.target.style.display = 'none';
         }
     });
 }
 
 // Initialization
-initializeMonths();
-financialData.categories.forEach(cat => {
-    cat.values = Array(12).fill(0);
-});
-updateTable();
+if (localStorage.getItem('financePassword')) {
+    document.getElementById('authSection').style.display = 'block';
+} else {
+    document.getElementById('loginForm').innerHTML = `
+        <h3>Set Up Password</h3>
+        <input type="password" id="password" placeholder="Create password (min 8 chars)">
+        <button class="primary-btn" onclick="handleLogin()">Initialize</button>
+    `;
+}
 </script>
 </body>
 </html>
