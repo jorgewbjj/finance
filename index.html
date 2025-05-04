@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Advanced Financial Tracker</title>
+    <title>Gestor Financeiro</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
     <style>
@@ -85,7 +85,7 @@
         <div class="category-sidebar">
             <div class="category-management">
                 <h3>Categorias</h3>
-                <button onclick="showAddCategoryModal()">+ Adicionar Categoria</button>
+                <button onclick="showAddCategoryModal()">+ Nova Categoria</button>
                 <div id="categoryList"></div>
             </div>
         </div>
@@ -199,13 +199,6 @@ function saveCategory() {
     renderCategoryList();
 }
 
-function deleteCategory(id) {
-    state.categories = state.categories.filter(c => c.id !== id);
-    saveState();
-    renderGrid();
-    renderCategoryList();
-}
-
 function closeModal() {
     document.getElementById('categoryModal').style.display = 'none';
     state.selectedCategory = null;
@@ -217,15 +210,14 @@ function renderCategoryList() {
         <div class="category-item">
             ${c.name} (${c.type === 'income' ? 'Receita' : 'Despesa'})
             <button onclick="showAddCategoryModal(${c.id})">Editar</button>
-            <button onclick="deleteCategory(${c.id})">Excluir</button>
         </div>
     `).join('');
 }
 
 function renderGrid() {
     const header = document.getElementById('tableHeader');
-    const body = document.getElementById('tableBody');
-    const footer = document.getElementById('tableFooter');
+    const body = document.getElementById('tableBody");
+    const footer = document.getElementById('tableFooter");
 
     header.innerHTML = `
         <tr>
@@ -240,9 +232,10 @@ function renderGrid() {
             ${category.values.map((value, index) => `
                 <td>
                     <input type="number" 
-                           value="${value !== 0 ? value : ''}"
+                           value="${value || ''}"
                            onchange="updateValue(${category.id}, ${index}, this.value)"
-                           placeholder="0">
+                           placeholder="${formatCurrency(0)}"
+                           step="0.01">
                 </td>
             `).join('')}
         </tr>
@@ -274,11 +267,11 @@ function calculateRunningBalances() {
     return state.months.map((_, index) => {
         const monthIncome = state.categories
             .filter(c => c.type === 'income')
-            .reduce((sum, c) => sum + c.values[index], 0);
+            .reduce((sum, c) => sum + (c.values[index] || 0), 0);
         
         const monthExpenses = state.categories
             .filter(c => c.type === 'expense')
-            .reduce((sum, c) => sum + c.values[index], 0);
+            .reduce((sum, c) => sum + (c.values[index] || 0), 0);
         
         runningBalance += (monthIncome - monthExpenses);
         return runningBalance;
@@ -327,8 +320,9 @@ function renderBalanceChart() {
                     }
                 },
                 datalabels: {
-                    anchor: 'end',
+                    anchor: 'start',
                     align: 'top',
+                    offset: 10,
                     color: '#2c3e50',
                     font: {
                         weight: 'bold',
