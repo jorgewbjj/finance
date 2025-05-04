@@ -391,6 +391,62 @@ function updateUI() {
 function updateTable() {
     const header = document.getElementById('tableHeader');
     const body = document.getElementById('tableBody');
+
+     // Add balance row
+    body.innerHTML += `
+        <tr class="balance-row">
+            <td><strong>Projected Balance</strong></td>
+            ${state.balance.map((b, index) => `
+                <td class="${state.months[index].current ? 'current-month' : ''}">
+                    <span class="${b < 0 ? 'negative' : 'positive'}">
+                        ${formatCurrency(b)}
+                    </span>
+                </td>
+            `).join('')}
+        </tr>
+    `;
+}
+
+// Add to CSS
+.balance-row {
+    background-color: #f8f9fa;
+    font-weight: bold;
+}
+
+.balance-row td {
+    border-top: 2px solid #dee2e6 !important;
+}
+
+.positive { color: #28a745; }
+.negative { color: #dc3545; }
+
+// Update currency formatting
+function formatCurrency(value) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: state.settings.currency || 'USD'
+    }).format(value);
+}
+
+// Update calculateBalances() to use formatCurrency
+function calculateBalances() {
+    let runningBalance = 0;
+    state.balance = state.months.map((_, i) => {
+        const income = state.categories
+            .filter(c => c.type === 'income')
+            .reduce((sum, c) => sum + (c.values[i] || 0), 0);
+        
+        const expenses = state.categories
+            .filter(c => c.type === 'expense')
+            .reduce((sum, c) => sum + (c.values[i] || 0), 0);
+        
+        runningBalance += (income - expenses);
+        return runningBalance;
+    });
+    
+    // Update the table footer with formatted values
+    updateUI();
+}
     
     // Update table header
     header.innerHTML = `<tr>
