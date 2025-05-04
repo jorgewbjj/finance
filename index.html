@@ -216,8 +216,8 @@ function renderCategoryList() {
 
 function renderGrid() {
     const header = document.getElementById('tableHeader');
-    const body = document.getElementById('tableBody");
-    const footer = document.getElementById('tableFooter");
+    const body = document.getElementById('tableBody');
+    const footer = document.getElementById('tableFooter');
 
     header.innerHTML = `
         <tr>
@@ -320,9 +320,9 @@ function renderBalanceChart() {
                     }
                 },
                 datalabels: {
-                    anchor: 'start',
-                    align: 'top',
-                    offset: 10,
+                    anchor: 'center',
+                    align: 'bottom',
+                    offset: -10,
                     color: '#2c3e50',
                     font: {
                         weight: 'bold',
