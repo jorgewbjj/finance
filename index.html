@@ -2,11 +2,9 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Advanced Financial Tracker</title>
-    <!-- Add Chart.js -->
+    <title>Advanced Financial Tracker with Chart</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* Existing styles remain unchanged */
         :root {
             --primary-color: #2c3e50;
             --positive-color: #27ae60;
@@ -36,16 +34,14 @@
             overflow-x: auto;
         }
 
-        /* Add chart styling */
         .balance-chart {
-            margin-top: 1rem;
+            margin-top: 2rem;
             padding: 1rem;
             background: white;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
 
-        /* Existing table styles remain unchanged */
         table {
             border-collapse: collapse;
             width: 100%;
@@ -74,56 +70,225 @@
             margin: 0.5rem 0;
             padding: 0.25rem 0.5rem;
         }
+
+        input[type="number"] {
+            width: 100%;
+            text-align: right;
+            border: none;
+            background: transparent;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="category-sidebar">
-            <!-- Existing sidebar content -->
+            <div class="category-management">
+                <h3>Categories</h3>
+                <button onclick="showAddCategoryModal()">+ Add Category</button>
+                <div id="categoryList"></div>
+            </div>
         </div>
 
         <div class="financial-grid">
-            <!-- Existing table -->
             <table id="financialTable">
                 <thead id="tableHeader"></thead>
                 <tbody id="tableBody"></tbody>
                 <tfoot id="tableFooter"></tfoot>
             </table>
-            
-            <!-- Add chart container -->
             <div class="balance-chart">
                 <canvas id="balanceChart"></canvas>
             </div>
         </div>
     </div>
 
-    <!-- Existing modal remains unchanged -->
+    <div id="categoryModal" style="display: none; position: fixed; top: 20%; left: 50%; transform: translateX(-50%); background: white; padding: 1rem; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+        <h3>Manage Category</h3>
+        <input type="text" id="categoryName" placeholder="Category name">
+        <select id="categoryType">
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+        </select>
+        <button onclick="saveCategory()">Save</button>
+        <button onclick="closeModal()">Cancel</button>
+    </div>
 
 <script>
-// Add chart instance reference
 let balanceChart = null;
 
-// Existing state and functions remain unchanged until renderGrid()
+let state = {
+    categories: [],
+    months: [],
+    transactions: [],
+    selectedCategory: null,
+    runningBalance: 0
+};
+
+function init() {
+    generateMonths();
+    loadCategories();
+    renderGrid();
+}
+
+function generateMonths() {
+    const today = new Date();
+    state.months = Array.from({ length: 12 }, (_, i) => {
+        const date = new Date(today.getFullYear(), today.getMonth() + i, 1);
+        return {
+            id: date.toISOString(),
+            name: date.toLocaleString('default', { month: 'short' }) + ' ' + date.getFullYear(),
+            isCurrent: i === 0,
+            startingBalance: i === 0 ? 0 : null
+        };
+    });
+}
+
+function loadCategories() {
+    state.categories = localStorage.getItem('categories') 
+        ? JSON.parse(localStorage.getItem('categories'))
+        : [
+            { 
+                id: 1, 
+                name: 'Salary', 
+                type: 'income', 
+                values: Array(12).fill(3000) // Sample income data
+            },
+            { 
+                id: 2, 
+                name: 'Rent', 
+                type: 'expense', 
+                values: Array(12).fill(1200) // Sample expense data
+            }
+        ];
+    
+    renderCategoryList();
+}
+
+function showAddCategoryModal(editId = null) {
+    state.selectedCategory = editId ? 
+        state.categories.find(c => c.id === editId) : 
+        null;
+    
+    document.getElementById('categoryModal').style.display = 'block';
+    if(state.selectedCategory) {
+        document.getElementById('categoryName').value = state.selectedCategory.name;
+        document.getElementById('categoryType').value = state.selectedCategory.type;
+    }
+}
+
+function saveCategory() {
+    const name = document.getElementById('categoryName').value;
+    const type = document.getElementById('categoryType').value;
+    
+    if(state.selectedCategory) {
+        state.selectedCategory.name = name;
+        state.selectedCategory.type = type;
+    } else {
+        state.categories.push({
+            id: Date.now(),
+            name,
+            type,
+            values: Array(12).fill(0)
+        });
+    }
+    
+    saveState();
+    closeModal();
+    renderGrid();
+    renderCategoryList();
+}
+
+function deleteCategory(id) {
+    state.categories = state.categories.filter(c => c.id !== id);
+    saveState();
+    renderGrid();
+    renderCategoryList();
+}
+
+function closeModal() {
+    document.getElementById('categoryModal').style.display = 'none';
+    state.selectedCategory = null;
+}
+
+function renderCategoryList() {
+    const list = document.getElementById('categoryList');
+    list.innerHTML = state.categories.map(c => `
+        <div class="category-item">
+            ${c.name} (${c.type})
+            <button onclick="showAddCategoryModal(${c.id})">Edit</button>
+            <button onclick="deleteCategory(${c.id})">Delete</button>
+        </div>
+    `).join('');
+}
 
 function renderGrid() {
-    // Existing grid rendering code
-    
-    // After updating footer, render chart
+    const header = document.getElementById('tableHeader');
+    const body = document.getElementById('tableBody');
+    const footer = document.getElementById('tableFooter');
+
+    header.innerHTML = `
+        <tr>
+            <th>Category</th>
+            ${state.months.map(m => `<th${m.isCurrent ? ' class="current-month"' : ''}>${m.name}</th>`).join('')}
+        </tr>
+    `;
+
+    body.innerHTML = state.categories.map(category => `
+        <tr>
+            <td>${category.name}</td>
+            ${category.values.map((value, index) => `
+                <td>
+                    <input type="number" 
+                           value="${value}"
+                           onchange="updateValue(${category.id}, ${index}, this.value)">
+                </td>
+            `).join('')}
+        </tr>
+    `).join('');
+
+    footer.innerHTML = `
+        <tr class="running-balance">
+            <td>Projected Balance</td>
+            ${calculateRunningBalances().map(balance => `
+                <td class="${balance >= 0 ? 'positive' : 'negative'}">
+                    ${formatCurrency(balance)}
+                </td>
+            `).join('')}
+        </tr>
+    `;
+
     renderBalanceChart();
 }
 
-// Add new chart rendering function
+function updateValue(categoryId, monthIndex, value) {
+    const category = state.categories.find(c => c.id === categoryId);
+    category.values[monthIndex] = parseFloat(value) || 0;
+    saveState();
+    renderGrid();
+}
+
+function calculateRunningBalances() {
+    let runningBalance = 0;
+    return state.months.map((_, index) => {
+        const monthIncome = state.categories
+            .filter(c => c.type === 'income')
+            .reduce((sum, c) => sum + c.values[index], 0);
+        
+        const monthExpenses = state.categories
+            .filter(c => c.type === 'expense')
+            .reduce((sum, c) => sum + c.values[index], 0);
+        
+        runningBalance += (monthIncome - monthExpenses);
+        return runningBalance;
+    });
+}
+
 function renderBalanceChart() {
     const ctx = document.getElementById('balanceChart').getContext('2d');
     const balances = calculateRunningBalances();
     const labels = state.months.map(m => m.name);
 
-    // Destroy existing chart if it exists
-    if (balanceChart) {
-        balanceChart.destroy();
-    }
+    if (balanceChart) balanceChart.destroy();
 
-    // Create new chart
     balanceChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -132,19 +297,31 @@ function renderBalanceChart() {
                 label: 'Projected Balance',
                 data: balances,
                 borderColor: '#2c3e50',
-                tension: 0.1,
-                fill: false
+                backgroundColor: 'rgba(44, 62, 80, 0.1)',
+                tension: 0.2,
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#2c3e50'
             }]
         },
         options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
                 legend: {
                     position: 'top',
                 },
                 title: {
                     display: true,
-                    text: '12-Month Balance Projection'
+                    text: '12-Month Balance Projection',
+                    font: { size: 16 }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Balance: ' + formatCurrency(context.raw);
+                        }
+                    }
                 }
             },
             scales: {
@@ -152,7 +329,7 @@ function renderBalanceChart() {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '$' + value;
+                            return '$' + value.toLocaleString();
                         }
                     }
                 }
@@ -161,7 +338,19 @@ function renderBalanceChart() {
     });
 }
 
-// Rest of the existing JavaScript remains unchanged
+function formatCurrency(value) {
+    return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD'
+    }).format(value);
+}
+
+function saveState() {
+    localStorage.setItem('categories', JSON.stringify(state.categories));
+}
+
+// Initialize the app
+init();
 </script>
 </body>
 </html>
