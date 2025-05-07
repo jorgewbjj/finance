@@ -3,34 +3,77 @@
 <head>
     <title>Biblioteca de PDFs</title>
     <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .upload-section { margin-bottom: 30px; }
-        .pdf-list { border-top: 2px solid #ccc; padding-top: 20px; }
-        .pdf-item { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
-        #pdfContainer { margin-top: 20px; }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        .upload-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .pdf-list {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .pdf-item {
+            margin: 15px 0;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #pdfInput {
+            margin: 10px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #status {
+            margin-top: 10px;
+            color: #d9534f;
+        }
     </style>
 </head>
 <body>
     <div class="upload-section">
-        <h2>Enviar PDF</h2>
+        <h2>📤 Enviar PDF</h2>
         <input type="file" id="pdfInput" accept=".pdf">
         <button onclick="uploadPDF()">Enviar PDF</button>
         <div id="status"></div>
     </div>
 
     <div class="pdf-list">
-        <h2>Biblioteca de PDFs</h2>
+        <h2>📚 Biblioteca de PDFs</h2>
         <div id="pdfContainer"><p>Carregando...</p></div>
     </div>
 
-    <!-- Firebase SDK (Versão compat) -->
+    <!-- Firebase SDK v9 (compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
 
     <script>
-          const firebaseConfig = {
-        apiKey: "AIzaSyDFw39E7f8TQPNlDVKrj5861_FMG_YqCy4",
+        // Configuração do Firebase (substitua com seus dados!)
+      const firebaseConfig = {
+  apiKey: "AIzaSyDFw39E7f8TQPNlDVKrj5861_FMG_YqCy4",
   authDomain: "finance-ef792.firebaseapp.com",
   projectId: "finance-ef792",
   storageBucket: "finance-ef792.firebasestorage.app",
@@ -38,77 +81,86 @@
   appId: "1:67228742612:web:fa2480d939bda6f18f1c41"
         };
 
+        // Inicializar Firebase
         const app = firebase.initializeApp(firebaseConfig);
         const storage = firebase.storage();
         const database = firebase.database();
 
-        // Função de upload (já funcional)
+        // Função de Upload
         async function uploadPDF() {
             const file = document.getElementById('pdfInput').files[0];
             if (!file) return;
 
             const status = document.getElementById('status');
-            status.textContent = "Enviando...";
+            status.textContent = "⏳ Enviando...";
 
             try {
-                const storageRef = storage.ref(`pdfs/${Date.now()}_${file.name}`);
+                // 1. Upload para o Storage
+                const fileName = `${Date.now()}_${file.name}`;
+                const storageRef = storage.ref(`pdfs/${fileName}`);
                 await storageRef.put(file);
+
+                // 2. Obter URL de download
                 const downloadURL = await storageRef.getDownloadURL();
 
+                // 3. Salvar metadados no Database
                 await database.ref('pdfs').push({
                     name: file.name,
                     url: downloadURL,
+                    fileName: fileName,
                     timestamp: firebase.database.ServerValue.TIMESTAMP
                 });
 
-                status.textContent = "Upload concluído!";
-                document.getElementById('pdfInput').value = ""; // Limpa o campo
+                status.textContent = "✅ Upload concluído!";
+                document.getElementById('pdfInput').value = ""; // Limpa o input
             } catch (error) {
-                status.textContent = `Erro: ${error.message}`;
+                status.textContent = `❌ Erro: ${error.message}`;
                 console.error("Detalhes do erro:", error);
             }
         }
 
-        // Função para CARREGAR PDFs (corrigida)
+        // Função para Carregar PDFs (Atualizada)
         function loadPDFs() {
             const pdfContainer = document.getElementById('pdfContainer');
             
-            // Ouvinte em tempo real para atualizações
             database.ref('pdfs').on('value', (snapshot) => {
-                pdfContainer.innerHTML = ""; // Limpa o conteúdo anterior
+                pdfContainer.innerHTML = "";
 
                 if (!snapshot.exists()) {
                     pdfContainer.innerHTML = "<p>Nenhum PDF encontrado.</p>";
                     return;
                 }
 
-                // Converte os dados para um array ordenado por timestamp
+                // Converter para array e ordenar
                 const pdfs = [];
-                snapshot.forEach((childSnapshot) => {
-                    pdfs.push({
-                        id: childSnapshot.key,
-                        ...childSnapshot.val()
-                    });
+                snapshot.forEach(child => {
+                    pdfs.push({ id: child.key, ...child.val() });
                 });
-
-                // Ordena do mais recente para o mais antigo
                 pdfs.sort((a, b) => b.timestamp - a.timestamp);
 
-                // Renderiza cada PDF
+                // Renderizar
                 pdfs.forEach(pdf => {
-                    const div = document.createElement('div');
-                    div.className = 'pdf-item';
-                    div.innerHTML = `
-                        <h3>${pdf.name}</h3>
-                        <p>Enviado em: ${new Date(pdf.timestamp).toLocaleString()}</p>
-                        <a href="${pdf.url}" target="_blank">Baixar PDF</a>
+                    const item = document.createElement('div');
+                    item.className = 'pdf-item';
+                    item.innerHTML = `
+                        <div>
+                            <h3>${pdf.name}</h3>
+                            <small>${new Date(pdf.timestamp).toLocaleString()}</small>
+                        </div>
+                        <a href="${pdf.url}" target="_blank" download="${pdf.name}">
+                            ⬇️ Baixar
+                        </a>
                     `;
-                    pdfContainer.appendChild(div);
+                    pdfContainer.appendChild(item);
                 });
+
+            }, (error) => {
+                pdfContainer.innerHTML = "<p>Erro ao carregar PDFs.</p>";
+                console.error("Erro no Firebase:", error);
             });
         }
 
-        // Inicia a carga dos PDFs quando a página carrega
+        // Iniciar quando a página carregar
         window.addEventListener('load', loadPDFs);
     </script>
 </body>
