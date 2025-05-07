@@ -24,14 +24,14 @@
         <div id="pdfContainer"></div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database.js"></script>
+    <!-- Firebase SDK (VERSÃO COMPAT) -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
 
     <script>
         // Configuração do Firebase (substitua com seus dados)
-            const firebaseConfig = {
+        const firebaseConfig = {
   apiKey: "AIzaSyDFw39E7f8TQPNlDVKrj5861_FMG_YqCy4",
   authDomain: "finance-ef792.firebaseapp.com",
   projectId: "finance-ef792",
@@ -42,7 +42,7 @@
 
         // Inicializar Firebase
         const app = firebase.initializeApp(firebaseConfig);
-        const storage = firebase.storage();
+        const storage = firebase.storage(); // Correto: declarado após o app
         const database = firebase.database();
 
         // Função para enviar PDF
@@ -54,7 +54,7 @@
             status.textContent = "Enviando...";
 
             try {
-                // Upload para Firebase Storage
+                // Upload para o Firebase Storage
                 const storageRef = storage.ref(`pdfs/${Date.now()}_${file.name}`);
                 const uploadTask = await storageRef.put(file);
                 
