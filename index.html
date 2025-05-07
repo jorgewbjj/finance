@@ -7,6 +7,7 @@
         .upload-section { margin-bottom: 30px; }
         .pdf-list { border-top: 2px solid #ccc; padding-top: 20px; }
         .pdf-item { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
+        #pdfContainer { margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -24,14 +25,14 @@
         <div id="pdfContainer"></div>
     </div>
 
-    <!-- Firebase SDK (VERSÃO COMPAT) -->
+    <!-- Firebase SDK (Versão compat) -->
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
 
     <script>
         // Configuração do Firebase (substitua com seus dados)
-        const firebaseConfig = {
+      const firebaseConfig = {
   apiKey: "AIzaSyDFw39E7f8TQPNlDVKrj5861_FMG_YqCy4",
   authDomain: "finance-ef792.firebaseapp.com",
   projectId: "finance-ef792",
@@ -42,7 +43,7 @@
 
         // Inicializar Firebase
         const app = firebase.initializeApp(firebaseConfig);
-        const storage = firebase.storage(); // Correto: declarado após o app
+        const storage = firebase.storage();
         const database = firebase.database();
 
         // Função para enviar PDF
@@ -69,18 +70,27 @@
                 });
 
                 status.textContent = "Upload completo!";
-                loadPDFs(); // Atualizar lista
             } catch (error) {
                 status.textContent = "Erro: " + error.message;
             }
         }
 
-        // Carregar e exibir PDFs
+        // Carregar e exibir PDFs (CORRIGIDO)
         function loadPDFs() {
             const pdfContainer = document.getElementById('pdfContainer');
-            pdfContainer.innerHTML = "";
+            
+            // Limpar lista antes de recarregar
+            pdfContainer.innerHTML = "<p>Carregando PDFs...</p>";
 
+            // Ouvir alterações no nó 'pdfs' do banco de dados
             database.ref('pdfs').on('value', (snapshot) => {
+                pdfContainer.innerHTML = ""; // Limpar conteúdo anterior
+
+                if (!snapshot.exists()) {
+                    pdfContainer.innerHTML = "<p>Nenhum PDF encontrado.</p>";
+                    return;
+                }
+
                 snapshot.forEach((childSnapshot) => {
                     const pdf = childSnapshot.val();
                     const pdfElement = document.createElement('div');
@@ -91,6 +101,9 @@
                     `;
                     pdfContainer.appendChild(pdfElement);
                 });
+            }, (error) => {
+                console.error("Erro ao carregar PDFs:", error);
+                pdfContainer.innerHTML = "<p>Erro ao carregar a biblioteca.</p>";
             });
         }
 
