@@ -7,7 +7,7 @@
         .upload-section { margin-bottom: 30px; }
         .pdf-list { border-top: 2px solid #ccc; padding-top: 20px; }
         .pdf-item { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; }
-        #status { color: #d9534f; margin-top: 10px; }
+        #pdfContainer { margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -20,7 +20,7 @@
 
     <div class="pdf-list">
         <h2>Biblioteca de PDFs</h2>
-        <div id="pdfContainer"></div>
+        <div id="pdfContainer"><p>Carregando...</p></div>
     </div>
 
     <!-- Firebase SDK (Versão compat) -->
@@ -29,8 +29,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
 
     <script>
-      const firebaseConfig = {
-  apiKey: "AIzaSyDFw39E7f8TQPNlDVKrj5861_FMG_YqCy4",
+        apiKey: "AIzaSyDFw39E7f8TQPNlDVKrj5861_FMG_YqCy4",
   authDomain: "finance-ef792.firebaseapp.com",
   projectId: "finance-ef792",
   storageBucket: "finance-ef792.firebasestorage.app",
@@ -42,6 +41,7 @@
         const storage = firebase.storage();
         const database = firebase.database();
 
+        // Função de upload (já funcional)
         async function uploadPDF() {
             const file = document.getElementById('pdfInput').files[0];
             if (!file) return;
@@ -50,14 +50,10 @@
             status.textContent = "Enviando...";
 
             try {
-                // 1. Upload do arquivo para o Storage
                 const storageRef = storage.ref(`pdfs/${Date.now()}_${file.name}`);
-                await storageRef.put(file); // Aguarda o upload completar
-
-                // 2. Obter URL de download CORRETAMENTE
+                await storageRef.put(file);
                 const downloadURL = await storageRef.getDownloadURL();
 
-                // 3. Salvar metadados no Realtime Database
                 await database.ref('pdfs').push({
                     name: file.name,
                     url: downloadURL,
@@ -65,31 +61,54 @@
                 });
 
                 status.textContent = "Upload concluído!";
-                document.getElementById('pdfInput').value = ""; // Limpa o input de arquivo
+                document.getElementById('pdfInput').value = ""; // Limpa o campo
             } catch (error) {
-                status.textContent = `Erro: ${error.message}`; // Exibe erro detalhado
-                console.error("Erro completo:", error); // Log completo no console
+                status.textContent = `Erro: ${error.message}`;
+                console.error("Detalhes do erro:", error);
             }
         }
 
+        // Função para CARREGAR PDFs (corrigida)
         function loadPDFs() {
             const pdfContainer = document.getElementById('pdfContainer');
+            
+            // Ouvinte em tempo real para atualizações
             database.ref('pdfs').on('value', (snapshot) => {
-                pdfContainer.innerHTML = "";
+                pdfContainer.innerHTML = ""; // Limpa o conteúdo anterior
+
+                if (!snapshot.exists()) {
+                    pdfContainer.innerHTML = "<p>Nenhum PDF encontrado.</p>";
+                    return;
+                }
+
+                // Converte os dados para um array ordenado por timestamp
+                const pdfs = [];
                 snapshot.forEach((childSnapshot) => {
-                    const pdf = childSnapshot.val();
-                    pdfContainer.innerHTML += `
-                        <div class="pdf-item">
-                            <h3>${pdf.name}</h3>
-                            <a href="${pdf.url}" target="_blank">Baixar</a>
-                        </div>
+                    pdfs.push({
+                        id: childSnapshot.key,
+                        ...childSnapshot.val()
+                    });
+                });
+
+                // Ordena do mais recente para o mais antigo
+                pdfs.sort((a, b) => b.timestamp - a.timestamp);
+
+                // Renderiza cada PDF
+                pdfs.forEach(pdf => {
+                    const div = document.createElement('div');
+                    div.className = 'pdf-item';
+                    div.innerHTML = `
+                        <h3>${pdf.name}</h3>
+                        <p>Enviado em: ${new Date(pdf.timestamp).toLocaleString()}</p>
+                        <a href="${pdf.url}" target="_blank">Baixar PDF</a>
                     `;
+                    pdfContainer.appendChild(div);
                 });
             });
         }
 
-        // Inicia ao carregar a página
-        loadPDFs();
+        // Inicia a carga dos PDFs quando a página carrega
+        window.addEventListener('load', loadPDFs);
     </script>
 </body>
 </html>
