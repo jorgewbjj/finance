@@ -1,28 +1,40 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chat com Upload de Arquivos</title>
-  <!-- SDKs do Firebase (incluindo Storage) -->
+  <title>Chat com Pastas e Arquivos</title>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage-compat.js"></script>
 </head>
 <body>
-  <h1>Chat em Tempo Real com Arquivos</h1>
+  <h1>Sistema de Pastas e Arquivos</h1>
+  
+  <!-- Criar pastas -->
+  <div>
+    <input type="text" id="folderName" placeholder="Nome da pasta">
+    <button onclick="createFolder()">Criar Pasta</button>
+  </div>
+
+  <!-- Upload para pasta -->
+  <div>
+    <select id="selectedFolder">
+      <option value="">Selecione uma pasta</option>
+    </select>
+    <input type="file" id="fileInput">
+    <button onclick="uploadFile()">Enviar para Pasta</button>
+  </div>
+
+  <!-- Listagem de pastas -->
+  <div id="foldersList"></div>
+
+  <!-- Chat -->
+  <h2>Chat</h2>
   <div id="messages"></div>
-  
-  <!-- Input para mensagem -->
-  <input type="text" id="messageInput" placeholder="Digite uma mensagem">
-  
-  <!-- Input para arquivo -->
-  <input type="file" id="fileInput">
-  
-  <!-- Botão de envio -->
-  <button onclick="sendMessage()">Enviar Mensagem/Arquivo</button>
+  <input type="text" id="messageInput" placeholder="Mensagem">
+  <button onclick="sendMessage()">Enviar</button>
 
   <script>
-    // Configuração do Firebase
-    const firebaseConfig = {
+      const firebaseConfig = {
   apiKey: "AIzaSyDFw39E7f8TQPNlDVKrj5861_FMG_YqCy4",
   authDomain: "finance-ef792.firebaseapp.com",
   databaseURL: "https://finance-ef792-default-rtdb.firebaseio.com",
@@ -32,59 +44,105 @@
   appId: "1:67228742612:web:fa2480d939bda6f18f1c41"
 };
 
-    // Inicialize o Firebase
+
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     const storage = firebase.storage();
 
-    // Função para enviar mensagem/arquivo
-    async function sendMessage() {
-      const messageInput = document.getElementById('messageInput');
-      const fileInput = document.getElementById('fileInput');
-      const message = messageInput.value;
-      const file = fileInput.files[0];
+    // Criar pasta
+    function createFolder() {
+      const folderName = document.getElementById('folderName').value;
+      if (!folderName) return;
 
-      // Objeto para armazenar dados da mensagem
-      const messageData = {
-        text: message,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      };
-
-      // Se houver arquivo, faz upload
-      if (file) {
-        const storageRef = storage.ref(`files/${file.name}`);
-        const uploadTask = await storageRef.put(file);
-        const downloadURL = await uploadTask.ref.getDownloadURL();
-        
-        // Adiciona URL do arquivo aos dados da mensagem
-        messageData.fileUrl = downloadURL;
-        messageData.fileName = file.name;
-      }
-
-      // Envia para o Realtime Database
-      database.ref('messages').push().set(messageData);
-
-      // Limpa campos
-      messageInput.value = '';
-      fileInput.value = '';
+      database.ref('folders').push().set({
+        name: folderName,
+        created: firebase.database.ServerValue.TIMESTAMP
+      });
+      document.getElementById('folderName').value = '';
     }
 
-    // Ouvinte para atualizações em tempo real
+    // Upload de arquivo para pasta
+    async function uploadFile() {
+      const file = document.getElementById('fileInput').files[0];
+      const folderId = document.getElementById('selectedFolder').value;
+      
+      if (!file || !folderId) return;
+
+      // Obter nome da pasta
+      const folderRef = database.ref(`folders/${folderId}`);
+      const folderSnapshot = await folderRef.once('value');
+      const folderName = folderSnapshot.val().name;
+
+      // Fazer upload do arquivo
+      const storageRef = storage.ref(`folders/${folderName}/${file.name}`);
+      const uploadTask = await storageRef.put(file);
+      const downloadURL = await uploadTask.ref.getDownloadURL();
+
+      // Salvar referência no banco
+      database.ref('files').push().set({
+        name: file.name,
+        url: downloadURL,
+        folder: folderId,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+    }
+
+    // Enviar mensagem
+    function sendMessage() {
+      const message = document.getElementById('messageInput').value;
+      database.ref('messages').push().set({
+        text: message,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+      document.getElementById('messageInput').value = '';
+    }
+
+    // Atualizar lista de pastas
+    database.ref('folders').on('value', (snapshot) => {
+      const select = document.getElementById('selectedFolder');
+      const foldersList = document.getElementById('foldersList');
+      
+      select.innerHTML = '<option value="">Selecione uma pasta</option>';
+      foldersList.innerHTML = '';
+
+      snapshot.forEach((child) => {
+        // Popular dropdown
+        const option = document.createElement('option');
+        option.value = child.key;
+        option.textContent = child.val().name;
+        select.appendChild(option);
+
+        // Listar pastas
+        const folderDiv = document.createElement('div');
+        folderDiv.innerHTML = `<h3>📁 ${child.val().name}</h3>`;
+        
+        // Listar arquivos da pasta
+        database.ref('files').orderByChild('folder').equalTo(child.key).on('value', (fileSnapshot) => {
+          folderDiv.innerHTML += '<div style="margin-left: 20px;">';
+          fileSnapshot.forEach((fileChild) => {
+            const file = fileChild.val();
+            folderDiv.innerHTML += `
+              <p>
+                📄 ${file.name} 
+                <a href="${file.url}" download style="color: blue;">(Download)</a>
+              </p>
+            `;
+          });
+          folderDiv.innerHTML += '</div>';
+        });
+
+        foldersList.appendChild(folderDiv);
+      });
+    });
+
+    // Atualizar chat
     database.ref('messages').on('value', (snapshot) => {
       const messagesDiv = document.getElementById('messages');
       messagesDiv.innerHTML = '';
       
-      snapshot.forEach((childSnapshot) => {
-        const message = childSnapshot.val();
-        let content = `<p>${message.text || ''}`;
-
-        // Se houver arquivo, adiciona link
-        if (message.fileUrl) {
-          content += `<br><a href="${message.fileUrl}" target="_blank" download="${message.fileName}">Download: ${message.fileName}</a>`;
-        }
-
-        content += `</p>`;
-        messagesDiv.innerHTML += content;
+      snapshot.forEach((child) => {
+        const msg = child.val();
+        messagesDiv.innerHTML += `<p>💬 ${msg.text}</p>`;
       });
     });
   </script>
