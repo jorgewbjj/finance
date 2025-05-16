@@ -1,13 +1,19 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Sistema de Pastas Corrigido</title>
+  <title>Sistema de Pastas Hierárquico</title>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage-compat.js"></script>
+  <style>
+    .folder { margin: 10px; padding: 10px; border: 1px solid #ddd; cursor: pointer; }
+    .files { margin-left: 30px; display: none; }
+    .file { margin: 5px; padding: 5px; }
+    .active { background-color: #f0f0f0; }
+  </style>
 </head>
 <body>
-  <h1>Sistema de Pastas e Arquivos</h1>
+  <h1>Sistema de Pastas</h1>
   
   <!-- Criar pastas -->
   <div>
@@ -21,11 +27,11 @@
       <option value="">Selecione uma pasta</option>
     </select>
     <input type="file" id="fileInput">
-    <button onclick="uploadFile()">Enviar para Pasta</button>
+    <button onclick="uploadFile()">Enviar Arquivo</button>
   </div>
 
   <!-- Listagem de pastas -->
-  <div id="foldersList"></div>
+  <div id="foldersContainer"></div>
 
   <script>
  const firebaseConfig = {
@@ -41,26 +47,19 @@
     const database = firebase.database();
     const storage = firebase.storage();
 
-    // Criar pasta (corrigido)
+    // Criar pasta
     function createFolder() {
       const folderName = document.getElementById('folderName').value.trim();
       if (!folderName) return;
 
-      // Verifica se a pasta já existe
-      const foldersRef = database.ref('folders');
-      foldersRef.orderByChild('name').equalTo(folderName).once('value', (snapshot) => {
-        if (!snapshot.exists()) {
-          foldersRef.push({
-            name: folderName,
-            created: firebase.database.ServerValue.TIMESTAMP
-          });
-        }
+      database.ref('folders').push({
+        name: folderName,
+        created: firebase.database.ServerValue.TIMESTAMP
       });
-      
       document.getElementById('folderName').value = '';
     }
 
-    // Upload de arquivo (corrigido)
+    // Upload de arquivo
     async function uploadFile() {
       const file = document.getElementById('fileInput').files[0];
       const folderId = document.getElementById('selectedFolder').value;
@@ -71,38 +70,36 @@
       }
 
       try {
-        // Obtém os dados da pasta
         const folderSnapshot = await database.ref(`folders/${folderId}`).once('value');
         const folderName = folderSnapshot.val().name;
 
-        // Upload para Storage
+        // Upload do arquivo
         const storageRef = storage.ref(`folders/${folderId}/${file.name}`);
         await storageRef.put(file);
         const downloadURL = await storageRef.getDownloadURL();
 
-        // Salva metadados no Realtime Database
+        // Salvar metadados
         await database.ref(`folders/${folderId}/files`).push().set({
           name: file.name,
           url: downloadURL,
           timestamp: firebase.database.ServerValue.TIMESTAMP
         });
 
-        alert('Arquivo enviado com sucesso!');
+        alert('Arquivo enviado!');
       } catch (error) {
-        console.error('Erro no upload:', error);
-        alert('Erro ao enviar arquivo!');
+        console.error('Erro:', error);
+        alert('Erro no upload!');
       }
     }
 
-    // Atualizar lista de pastas (corrigido)
+    // Gerenciar exibição de pastas
     function setupFolders() {
       const foldersRef = database.ref('folders');
       
-      // Atualiza o dropdown
+      // Atualizar dropdown
       foldersRef.on('value', (snapshot) => {
         const select = document.getElementById('selectedFolder');
         select.innerHTML = '<option value="">Selecione uma pasta</option>';
-        
         snapshot.forEach((child) => {
           const option = document.createElement('option');
           option.value = child.key;
@@ -111,29 +108,49 @@
         });
       });
 
-      // Atualiza a listagem visual
+      // Listar pastas
       foldersRef.on('child_added', (child) => {
         const folder = child.val();
+        const folderId = child.key;
+        
+        // Criar elemento da pasta
         const folderDiv = document.createElement('div');
-        folderDiv.id = `folder-${child.key}`;
+        folderDiv.className = 'folder';
         folderDiv.innerHTML = `
-          <h3>📁 ${folder.name}</h3>
-          <div class="files" id="files-${child.key}"></div>
+          <div class="folder-header" onclick="toggleFolder('${folderId}')">
+            📁 ${folder.name}
+          </div>
+          <div class="files" id="files-${folderId}"></div>
         `;
-        
-        document.getElementById('foldersList').appendChild(folderDiv);
-        
-        // Monitora arquivos da pasta
-        database.ref(`folders/${child.key}/files`).on('child_added', (fileChild) => {
-          const file = fileChild.val();
-          const fileElement = document.createElement('div');
-          fileElement.innerHTML = `
-            📄 ${file.name} 
-            <a href="${file.url}" download>Download</a>
-          `;
-          document.getElementById(`files-${child.key}`).appendChild(fileElement);
-        });
+
+        document.getElementById('foldersContainer').appendChild(folderDiv);
       });
+    }
+
+    // Alternar exibição de arquivos
+    async function toggleFolder(folderId) {
+      const filesContainer = document.getElementById(`files-${folderId}`);
+      const folderHeader = document.querySelector(`[onclick="toggleFolder('${folderId}')"]`);
+
+      // Alternar visualização
+      filesContainer.style.display = filesContainer.style.display === 'none' ? 'block' : 'none';
+      folderHeader.classList.toggle('active');
+
+      // Carregar arquivos apenas na primeira vez
+      if (filesContainer.children.length === 0) {
+        const filesRef = database.ref(`folders/${folderId}/files`);
+        
+        filesRef.on('child_added', (snapshot) => {
+          const file = snapshot.val();
+          const fileElement = document.createElement('div');
+          fileElement.className = 'file';
+          fileElement.innerHTML = `
+            📄 ${file.name}
+            <a href="${file.url}" download style="margin-left: 10px;">Download</a>
+          `;
+          filesContainer.appendChild(fileElement);
+        });
+      }
     }
 
     // Inicialização
@@ -141,14 +158,5 @@
       setupFolders();
     };
   </script>
-
-  <style>
-    /* Estilos básicos para melhor visualização */
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    div { margin: 10px 0; }
-    .files { margin-left: 25px; border-left: 2px solid #ccc; padding-left: 10px; }
-    h3 { color: #333; cursor: pointer; }
-    a { color: blue; text-decoration: underline; }
-  </style>
 </body>
 </html>
