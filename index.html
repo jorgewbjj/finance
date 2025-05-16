@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Chat com Pastas e Arquivos</title>
+  <title>Sistema de Pastas Corrigido</title>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-storage-compat.js"></script>
@@ -27,14 +27,8 @@
   <!-- Listagem de pastas -->
   <div id="foldersList"></div>
 
-  <!-- Chat -->
-  <h2>Chat</h2>
-  <div id="messages"></div>
-  <input type="text" id="messageInput" placeholder="Mensagem">
-  <button onclick="sendMessage()">Enviar</button>
-
   <script>
-      const firebaseConfig = {
+ const firebaseConfig = {
   apiKey: "AIzaSyDFw39E7f8TQPNlDVKrj5861_FMG_YqCy4",
   authDomain: "finance-ef792.firebaseapp.com",
   databaseURL: "https://finance-ef792-default-rtdb.firebaseio.com",
@@ -43,108 +37,118 @@
   messagingSenderId: "67228742612",
   appId: "1:67228742612:web:fa2480d939bda6f18f1c41"
 };
-
-
     firebase.initializeApp(firebaseConfig);
     const database = firebase.database();
     const storage = firebase.storage();
 
-    // Criar pasta
+    // Criar pasta (corrigido)
     function createFolder() {
-      const folderName = document.getElementById('folderName').value;
+      const folderName = document.getElementById('folderName').value.trim();
       if (!folderName) return;
 
-      database.ref('folders').push().set({
-        name: folderName,
-        created: firebase.database.ServerValue.TIMESTAMP
+      // Verifica se a pasta já existe
+      const foldersRef = database.ref('folders');
+      foldersRef.orderByChild('name').equalTo(folderName).once('value', (snapshot) => {
+        if (!snapshot.exists()) {
+          foldersRef.push({
+            name: folderName,
+            created: firebase.database.ServerValue.TIMESTAMP
+          });
+        }
       });
+      
       document.getElementById('folderName').value = '';
     }
 
-    // Upload de arquivo para pasta
+    // Upload de arquivo (corrigido)
     async function uploadFile() {
       const file = document.getElementById('fileInput').files[0];
       const folderId = document.getElementById('selectedFolder').value;
       
-      if (!file || !folderId) return;
+      if (!file || !folderId) {
+        alert('Selecione um arquivo e uma pasta!');
+        return;
+      }
 
-      // Obter nome da pasta
-      const folderRef = database.ref(`folders/${folderId}`);
-      const folderSnapshot = await folderRef.once('value');
-      const folderName = folderSnapshot.val().name;
+      try {
+        // Obtém os dados da pasta
+        const folderSnapshot = await database.ref(`folders/${folderId}`).once('value');
+        const folderName = folderSnapshot.val().name;
 
-      // Fazer upload do arquivo
-      const storageRef = storage.ref(`folders/${folderName}/${file.name}`);
-      const uploadTask = await storageRef.put(file);
-      const downloadURL = await uploadTask.ref.getDownloadURL();
+        // Upload para Storage
+        const storageRef = storage.ref(`folders/${folderId}/${file.name}`);
+        await storageRef.put(file);
+        const downloadURL = await storageRef.getDownloadURL();
 
-      // Salvar referência no banco
-      database.ref('files').push().set({
-        name: file.name,
-        url: downloadURL,
-        folder: folderId,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      });
-    }
-
-    // Enviar mensagem
-    function sendMessage() {
-      const message = document.getElementById('messageInput').value;
-      database.ref('messages').push().set({
-        text: message,
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-      });
-      document.getElementById('messageInput').value = '';
-    }
-
-    // Atualizar lista de pastas
-    database.ref('folders').on('value', (snapshot) => {
-      const select = document.getElementById('selectedFolder');
-      const foldersList = document.getElementById('foldersList');
-      
-      select.innerHTML = '<option value="">Selecione uma pasta</option>';
-      foldersList.innerHTML = '';
-
-      snapshot.forEach((child) => {
-        // Popular dropdown
-        const option = document.createElement('option');
-        option.value = child.key;
-        option.textContent = child.val().name;
-        select.appendChild(option);
-
-        // Listar pastas
-        const folderDiv = document.createElement('div');
-        folderDiv.innerHTML = `<h3>📁 ${child.val().name}</h3>`;
-        
-        // Listar arquivos da pasta
-        database.ref('files').orderByChild('folder').equalTo(child.key).on('value', (fileSnapshot) => {
-          folderDiv.innerHTML += '<div style="margin-left: 20px;">';
-          fileSnapshot.forEach((fileChild) => {
-            const file = fileChild.val();
-            folderDiv.innerHTML += `
-              <p>
-                📄 ${file.name} 
-                <a href="${file.url}" download style="color: blue;">(Download)</a>
-              </p>
-            `;
-          });
-          folderDiv.innerHTML += '</div>';
+        // Salva metadados no Realtime Database
+        await database.ref(`folders/${folderId}/files`).push().set({
+          name: file.name,
+          url: downloadURL,
+          timestamp: firebase.database.ServerValue.TIMESTAMP
         });
 
-        foldersList.appendChild(folderDiv);
-      });
-    });
+        alert('Arquivo enviado com sucesso!');
+      } catch (error) {
+        console.error('Erro no upload:', error);
+        alert('Erro ao enviar arquivo!');
+      }
+    }
 
-    // Atualizar chat
-    database.ref('messages').on('value', (snapshot) => {
-      const messagesDiv = document.getElementById('messages');
-      messagesDiv.innerHTML = '';
+    // Atualizar lista de pastas (corrigido)
+    function setupFolders() {
+      const foldersRef = database.ref('folders');
       
-      snapshot.forEach((child) => {
-        const msg = child.val();
-        messagesDiv.innerHTML += `<p>💬 ${msg.text}</p>`;
+      // Atualiza o dropdown
+      foldersRef.on('value', (snapshot) => {
+        const select = document.getElementById('selectedFolder');
+        select.innerHTML = '<option value="">Selecione uma pasta</option>';
+        
+        snapshot.forEach((child) => {
+          const option = document.createElement('option');
+          option.value = child.key;
+          option.textContent = child.val().name;
+          select.appendChild(option);
+        });
       });
-    });
+
+      // Atualiza a listagem visual
+      foldersRef.on('child_added', (child) => {
+        const folder = child.val();
+        const folderDiv = document.createElement('div');
+        folderDiv.id = `folder-${child.key}`;
+        folderDiv.innerHTML = `
+          <h3>📁 ${folder.name}</h3>
+          <div class="files" id="files-${child.key}"></div>
+        `;
+        
+        document.getElementById('foldersList').appendChild(folderDiv);
+        
+        // Monitora arquivos da pasta
+        database.ref(`folders/${child.key}/files`).on('child_added', (fileChild) => {
+          const file = fileChild.val();
+          const fileElement = document.createElement('div');
+          fileElement.innerHTML = `
+            📄 ${file.name} 
+            <a href="${file.url}" download>Download</a>
+          `;
+          document.getElementById(`files-${child.key}`).appendChild(fileElement);
+        });
+      });
+    }
+
+    // Inicialização
+    window.onload = () => {
+      setupFolders();
+    };
   </script>
+
+  <style>
+    /* Estilos básicos para melhor visualização */
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    div { margin: 10px 0; }
+    .files { margin-left: 25px; border-left: 2px solid #ccc; padding-left: 10px; }
+    h3 { color: #333; cursor: pointer; }
+    a { color: blue; text-decoration: underline; }
+  </style>
 </body>
 </html>
