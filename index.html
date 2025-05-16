@@ -1,146 +1,53 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>Sistema de Gestão de Férias</title>
-    <style>
-        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .section { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; }
-        .form-group { margin-bottom: 15px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-        th { background-color: #f2f2f2; }
-    </style>
+  <title>Site em Tempo Real</title>
+  <!-- Inclua o SDK do Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
 </head>
 <body>
-    <h1>Sistema de Gestão de Férias</h1>
+  <h1>Chat em Tempo Real</h1>
+  <div id="messages"></div>
+  <input type="text" id="messageInput" placeholder="Digite uma mensagem">
+  <button onclick="sendMessage()">Enviar</button>
 
-    <!-- Cadastro de Colaborador -->
-    <div class="section">
-        <h2>Cadastrar Novo Colaborador</h2>
-        <div class="form-group">
-            <input type="text" id="nome" placeholder="Nome do colaborador">
-        </div>
-        <div class="form-group">
-            <input type="number" id="diasFerias" placeholder="Dias totais de férias">
-        </div>
-        <button onclick="cadastrarColaborador()">Cadastrar</button>
-    </div>
+  <script>
+    // Configuração do Firebase
+    const firebaseConfig = {
+      apiKey: "SUA_API_KEY",
+      authDomain: "SEU_PROJETO.firebaseapp.com",
+      databaseURL: "https://SEU_PROJETO.firebaseio.com",
+      projectId: "SEU_PROJETO",
+      storageBucket: "SEU_PROJETO.appspot.com",
+      messagingSenderId: "SEU_SENDER_ID",
+      appId: "SEU_APP_ID"
+    };
 
-    <!-- Registro de Férias -->
-    <div class="section">
-        <h2>Registrar Férias</h2>
-        <div class="form-group">
-            <select id="colabFerias">
-                <option value="">Selecione o colaborador</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <input type="date" id="inicioFerias">
-            <input type="date" id="fimFerias">
-        </div>
-        <button onclick="registrarFerias()">Registrar</button>
-    </div>
+    // Inicialize o Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
-    <!-- Registro de Folgas -->
-    <div class="section">
-        <h2>Registrar Folga</h2>
-        <div class="form-group">
-            <select id="colabFolga">
-                <option value="">Selecione o colaborador</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <input type="date" id="dataFolga">
-        </div>
-        <button onclick="registrarFolga()">Registrar</button>
-    </div>
+    // Função para enviar mensagem
+    function sendMessage() {
+      const messageInput = document.getElementById('messageInput');
+      const message = messageInput.value;
+      database.ref('messages').push().set({
+        text: message,
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+      });
+      messageInput.value = '';
+    }
 
-    <!-- Relatórios -->
-    <div class="section">
-        <h2>Relatórios</h2>
-        <select id="colabRelatorio">
-            <option value="">Selecione o colaborador</option>
-        </select>
-        <button onclick="gerarRelatorio()">Gerar PDF</button>
-    </div>
-
-    <!-- Listagem -->
-    <div class="section">
-        <h2>Colaboradores Cadastrados</h2>
-        <table id="tabelaColaboradores">
-            <thead>
-                <tr>
-                    <th>Nome</th>
-                    <th>Dias Totais</th>
-                    <th>Dias Restantes</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Dados serão inseridos via JavaScript -->
-            </tbody>
-        </table>
-    </div>
-
-    <script>
-        // Dados em memória
-        let colaboradores = [];
-
-        function atualizarSelects() {
-            const selects = document.querySelectorAll('select');
-            selects.forEach(select => {
-                if(select.id !== 'colabRelatorio') return;
-                select.innerHTML = '<option value="">Selecione o colaborador</option>';
-                colaboradores.forEach((colab, index) => {
-                    select.innerHTML += `<option value="${index}">${colab.nome}</option>`;
-                });
-            });
-        }
-
-        function cadastrarColaborador() {
-            const novoColaborador = {
-                nome: document.getElementById('nome').value,
-                diasFerias: parseInt(document.getElementById('diasFerias').value),
-                feriasRestantes: parseInt(document.getElementById('diasFerias').value),
-                historicoFerias: [],
-                historicoFolgas: []
-            };
-            colaboradores.push(novoColaborador);
-            atualizarSelects();
-            atualizarTabela();
-        }
-
-        function atualizarTabela() {
-            const tbody = document.querySelector('#tabelaColaboradores tbody');
-            tbody.innerHTML = '';
-            colaboradores.forEach(colab => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${colab.nome}</td>
-                        <td>${colab.diasFerias}</td>
-                        <td>${colab.feriasRestantes}</td>
-                    </tr>
-                `;
-            });
-        }
-
-        function registrarFerias() {
-            // Implementar lógica de registro de férias
-        }
-
-        function registrarFolga() {
-            // Implementar lógica de registro de folga
-        }
-
-        function gerarRelatorio() {
-            // Implementar geração de PDF usando biblioteca como jsPDF
-        }
-
-        // Inicialização
-        document.addEventListener('DOMContentLoaded', atualizarSelects);
-    </script>
-
-    <!-- Incluir biblioteca para gerar PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    // Ouvinte para atualizações em tempo real
+    database.ref('messages').on('value', (snapshot) => {
+      const messagesDiv = document.getElementById('messages');
+      messagesDiv.innerHTML = '';
+      snapshot.forEach((childSnapshot) => {
+        const message = childSnapshot.val();
+        messagesDiv.innerHTML += `<p>${message.text}</p>`;
+      });
+    });
+  </script>
 </body>
 </html>
